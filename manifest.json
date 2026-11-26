@@ -1,0 +1,34 @@
+chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+  const tab = tabs.at(0);
+  const isHttps = tab.url.startsWith("https://");
+  const ssl = document.getElementById("sslStatus");
+  ssl.innerText = isHttps ? "🔒 חיבור מוצפן ותקין (HTTPS)" : "⚠️ אזהרה: אתר לא מוצפן (HTTP)";
+  ssl.style.color = isHttps ? "#34d399" : "#f87171";
+
+  chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: () => document.querySelectorAll("script, iframe").length
+  }, (res) => {
+    const count = (res && res.length > 0) ? res.at(0).result : 0;
+    document.getElementById("trackerCount").innerText = "📡 זוהו " + count + " סקריפטים חיצוניים";
+  });
+
+  document.getElementById("cleanBtn").addEventListener("click", () => {
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => {
+        let removed = 0;
+        document.querySelectorAll("iframe, script").forEach(el => {
+          if (el.src && (el.src.includes("track") || el.src.includes("ads") || el.src.includes("analytics"))) {
+            el.remove();
+            removed++;
+          }
+        });
+        return removed;
+      }
+    }, (res) => {
+      const removed = (res && res.length > 0) ? res.at(0).result : 0;
+      document.getElementById("result").innerText = "✔ הוסרו " + removed + " רכיבי מעקב מהדף!";
+    });
+  });
+});
